@@ -1,4 +1,4 @@
-example settings.json
+## example settings.json
   {
   "steam_game_id": "387990", # this is found in steam_libary/right_click_scrap/propertys/updates/app_id
 
@@ -12,7 +12,7 @@ example settings.json
   "set_args": false # set to false by default, instructions printed to terminal when program is ran
   }
 
-without comments 
+## without comments 
   {
     "steam_game_id": "387990",
     "save_location": "C:\\Users\\zacha\\AppData\\Roaming\\Axolot Games\\Scrap Mechanic\\User\\User_76561198961850617\\Save\\Survival\\FirstSuvivel.db",
@@ -21,4 +21,4 @@ without comments
     "set_args": true
   }
 
-a prebuilt exacutable is in the example folder 
+### a prebuilt exacutable is in the example folder 
