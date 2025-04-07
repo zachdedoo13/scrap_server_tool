@@ -13,22 +13,23 @@ struct Settings {
     pub steam_game_id: String,
     pub save_location: String,
     pub backup_output_path: String,
+    pub auto_save_interval_sec: u64,
     pub set_args: bool,
 }
 
-
-const SAVE_INTERVAL: Duration = Duration::from_secs(60*5);
+// const SAVE_INTERVAL: Duration = Duration::from_secs(60*3);
 
 fn main() -> Result<()> {
     println!("Starting server tool");
 
-    let settings_json = std::fs::read("settings.json")?;
+    let settings_json: Vec<u8> = std::fs::read("settings.json")?;
     let settings: Settings = serde_json::from_slice(&settings_json)?;
     println!("{settings:#?}");
 
+    let save_interval = Duration::from_secs(settings.auto_save_interval_sec);
     let mut sys = System::new_all();
 
-    let scrap = is_open(&sys);
+    let scrap: Option<&Process> = is_open(&sys);
     if let Some(s) = scrap {
         println!("Killed already running processes");
         s.kill();
@@ -36,7 +37,7 @@ fn main() -> Result<()> {
     };
 
     println!("Starting event loop");
-    let mut save_timer = Instant::now();
+    let mut save_timer: Instant = Instant::now();
     loop {
         sys.refresh_all();
         if is_open(&sys).is_none() {
@@ -45,7 +46,7 @@ fn main() -> Result<()> {
             sleep(Duration::from_secs(30));
         } else {
             // println!("Open");
-            if save_timer.elapsed() > SAVE_INTERVAL {
+            if save_timer.elapsed() > save_interval {
                 save_timer = Instant::now();
                 save_backup(&settings)?;
             }
