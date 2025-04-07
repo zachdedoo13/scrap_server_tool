@@ -85,7 +85,7 @@ fn open_game(settings: &Settings) -> Result<()> {
     println!("Opening scrap mechanic");
 
     let args = format!("-open \"{}\"", settings.save_location);
-    println!("In property's set launch args to ={args}");
+    println!("In property's set launch args to (inside brackets) [{args}]");
 
     if !settings.set_args {
         println!("Set the above launch arguments in the games launch options on steam, this cannot be automated because aids");
