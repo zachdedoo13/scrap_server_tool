@@ -88,7 +88,7 @@ fn open_game(settings: &Settings) -> Result<()> {
     println!("In property's set launch args to ={args}");
 
     if !settings.set_args {
-        println!("Set launch args and swap set args in settings");
+        println!("Set the above launch arguments in the games launch options on steam, this cannot be automated because aids");
         sleep(Duration::from_secs(20));
         std::process::exit(1);
     }
