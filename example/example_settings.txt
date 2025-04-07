@@ -1,0 +1,10 @@
+{
+  "steam_game_id": "387990", # this is found in steam_libary/right_click_scrap/propertys/updates/app_id
+
+  "save_location": "C:\\Users\\zacha\\AppData\\Roaming\\Axolot Games\\Scrap Mechanic\\User\\User_76561198961850617\\Save\\Survival\\FirstSuvivel.db",
+        # this path should be similar just use a different save, eg ServerWorld.db
+
+  "backup_output_path": "C:\\Users\\zacha\\RustroverProjects\\scrap_server_tool\\test_out", # this is the folder where backups are saved
+
+  "set_args": false # set to false by default, instructions printed to terminal when program is ran
+}
