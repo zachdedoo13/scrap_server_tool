@@ -1,7 +1,7 @@
 {
+  "steam_exe_location": "C:\\Program Files (x86)\\Steam\\steam.exe",
   "steam_game_id": "387990",
   "save_location": "C:\\Users\\zacha\\AppData\\Roaming\\Axolot Games\\Scrap Mechanic\\User\\User_76561198961850617\\Save\\Survival\\FirstSuvivel.db",
-  "backup_output_path": "C:\\Users\\zacha\\RustroverProjects\\scrap_server_tool\\test_out",
-  "auto_save_interval_sec": 5,
-  "set_args": true
+  "backup_output_path": "C:\\Users\\zacha\\RustroverProjects\\scrap_server_tool\\example\\out",
+  "auto_save_interval_sec": 320
 }

@@ -10,11 +10,11 @@ use sysinfo::{Process, System};
 
 #[derive(Clone, Serialize, Deserialize, Debug)]
 struct Settings {
+    pub steam_exe_location: String,
     pub steam_game_id: String,
     pub save_location: String,
     pub backup_output_path: String,
     pub auto_save_interval_sec: u64,
-    pub set_args: bool,
 }
 
 // const SAVE_INTERVAL: Duration = Duration::from_secs(60*3);
@@ -84,18 +84,11 @@ fn save_backup(settings: &Settings) -> Result<()> {
 fn open_game(settings: &Settings) -> Result<()> {
     println!("Opening scrap mechanic");
 
-    let args = format!("-open \"{}\"", settings.save_location);
-    println!("In property's set launch args to (inside brackets) [{args}]");
-
-    if !settings.set_args {
-        println!("Set the above launch arguments in the games launch options on steam, this cannot be automated because aids, when youve done that set set_args in settings to true");
-        sleep(Duration::from_secs(20));
-        std::process::exit(1);
-    }
-
-    Command::new("cmd")
-        .arg("/C")
-        .arg(&format!("start steam://rungameid/{}", settings.steam_game_id))
+    Command::new(&settings.steam_exe_location)
+        .arg("-applaunch")
+        .arg(&settings.steam_game_id)
+        .arg("-open")
+        .arg(&settings.save_location)
         .spawn()?;
 
     Ok(())
