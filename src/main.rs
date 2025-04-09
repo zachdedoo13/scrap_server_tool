@@ -3,6 +3,7 @@ use std::ffi::OsStr;
 use std::path::PathBuf;
 use std::process::Command;
 use std::str::FromStr;
+use std::sync::atomic::{AtomicBool, Ordering};
 use tokio::time::sleep;
 use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 use anyhow::Result;
@@ -32,14 +33,7 @@ async fn main() -> Result<()> {
 
     let bot = start_bot(&settings.discord_bot_token).await.unwrap();
 
-    // bot.send_msg("Test").await.unwrap();
-    // let file = include_bytes!("../example/out/1743999482077#FirstSuvivel.db");
-    // bot.send_file("Test.db", file).await.unwrap();
-
-    // testing
-    // loop {
-    //
-    // }
+    let _ = bot.send_msg(&format!("Bot online, starting server, settings = {settings:#?}")).await;
 
     let kill_intervel = Duration::from_secs(settings.full_restart_timer_min * 60);
     let save_interval = Duration::from_secs(settings.auto_save_interval_sec);
@@ -59,6 +53,7 @@ async fn main() -> Result<()> {
         sys.refresh_all();
         if is_open(&sys).is_none() {
             println!("Not open");
+            let _ = bot.send_msg("Starting scrap mechanic").await;
             open_game(&settings).unwrap();
             sleep(Duration::from_secs(30)).await;
         } else {
@@ -70,9 +65,14 @@ async fn main() -> Result<()> {
                 }
             }
 
-            println!("{}", kill_timer.elapsed().as_secs());
+            let c = FORCE_KILL.load(Ordering::SeqCst);
 
-            if kill_timer.elapsed() > kill_intervel {
+            if (kill_timer.elapsed() > kill_intervel) | c {
+                if c {
+                    FORCE_KILL.store(false, Ordering::SeqCst);
+                    println!("Killing server from forced restart");
+                    let _ = bot.send_msg("Triggerd forced restart").await;
+                }
                 println!("Running periodic scrap machanic kill");
                 kill_timer = Instant::now();
                 if let Err(e) = save_backup(&settings, &bot).await {
@@ -83,13 +83,20 @@ async fn main() -> Result<()> {
                 if let Some(s) = scrap {
                     println!("Periodic scrap machanic kill");
                     s.kill();
+                    let _ = bot.send_msg("Killing server, will restart momentarily").await;
                     sleep(Duration::from_secs(10)).await;
                 };
             }
 
-            sleep(Duration::from_secs(10)).await;
+            sleep(Duration::from_secs(1)).await;
         }
     }
+}
+
+static FORCE_KILL: AtomicBool = AtomicBool::new(false);
+pub fn trigger_force_restart() {
+    println!("Triggering forced restart");
+    FORCE_KILL.store(true, Ordering::SeqCst);
 }
 
 fn is_open(sys: &System) -> Option<&Process> {
@@ -135,13 +142,14 @@ fn open_game(settings: &Settings) -> Result<()> {
 
 pub use bot::*;
 mod bot {
-    use std::sync::Arc;
+    use std::sync::{Arc, Mutex};
     use std::sync::mpsc::{channel, Sender};
-    use serenity::all::{ChannelId, Context, EventHandler, GatewayIntents, GuildId, Http, Ready};
+    use serenity::all::{ChannelId, Context, EventHandler, GatewayIntents, GuildId, Http, Message, Ready};
     use serenity::{async_trait, Client};
     use tokio::spawn;
     use anyhow::Result;
     use serenity::builder::{CreateAttachment, CreateMessage};
+    use crate::trigger_force_restart;
 
     const MAX_ATTACH_BYTES: usize = 5_000_000;
     pub struct Bot {
@@ -174,10 +182,21 @@ mod bot {
     }
 
     struct BotHandler {
+        channel_id: Mutex<Option<ChannelId>>,
         sender: Sender<(Arc<Http>, GuildId, ChannelId)>,
     }
     #[async_trait]
     impl EventHandler for BotHandler {
+        async fn message(&self, ctx: Context, new_message: Message) {
+            println!("{}", &new_message.content);
+            let c = self.channel_id.lock().unwrap().unwrap();
+            if new_message.channel_id == c {
+                println!("{}", &new_message.content);
+                if &new_message.content == "ForceRestartServer" {
+                    trigger_force_restart()
+                }
+            }
+        }
         async fn ready(&self, ctx: Context, data_about_bot: Ready) {
             println!("Starting bot event handler");
             let guilds = data_about_bot.guilds;
@@ -187,8 +206,9 @@ mod bot {
             //             // }
 
             let server = guilds.first().expect("Add the bot to only one server with admin").id;
-            let channel = find_general_channel(&ctx, server).await.expect("No general channel");
+            let channel = find_general_channel(&ctx, server).await.expect("No server_backup channel");
 
+            *self.channel_id.lock().unwrap() = Some(channel);
 
 
             self.sender.send((ctx.http.clone(), server, channel)).unwrap()
@@ -202,7 +222,7 @@ mod bot {
         match ctx.http.get_channels(guild_id).await {
             Ok(channels) => {
                 for channel in channels {
-                    if channel.name == "general" {
+                    if channel.name == "server_backup" {
                         return Some(channel.id);
                     }
                 }
@@ -218,13 +238,14 @@ mod bot {
 
     pub async fn start_bot(token: &str) -> Result<Bot> {
         let intents = GatewayIntents::GUILD_MESSAGES
-            | GatewayIntents::GUILDS; // Add the GUILDS intent
+            | GatewayIntents::GUILDS | GatewayIntents::MESSAGE_CONTENT; // Add the GUILDS intent
 
         let (s, r) = channel();
 
 
         let mut client = Client::builder(token, intents)
             .event_handler(BotHandler {
+                channel_id: Mutex::new(None),
                 sender: s,
             })
             .await?;
